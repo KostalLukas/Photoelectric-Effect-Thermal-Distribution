@@ -81,12 +81,12 @@ class pam(dev):
         time.sleep(t * 1e-3)
     
     # transmit data over serial and recieve a response
-    def Rx(self, string, t=100):
+    def Rx(self, string):
         string += '\r'
         string = bytes(string, encoding='utf-8')
         self.serial.write(string)
         
-        time.sleep(t * 1e-3)
+        time.sleep(0.1)
         resp = self.serial.readline()
         resp = str(resp, encoding='utf-8')
         if resp[-1:] == '\r':
@@ -166,8 +166,8 @@ class pam(dev):
         self.Tx('AVER OFF')
         
     # trigger a reading and return value as float
-    def READ(self, t=400):
-        meas = self.Rx('READ?', t)
+    def READ(self):
+        meas = self.Rx('READ?')
         
         vals = meas.split(',')
         vals[0] = vals[0][:-1]
@@ -176,8 +176,8 @@ class pam(dev):
         return vals[0]
     
     # set trigger number of trigger events and trigger delay
-    def TRIG(self, Ntrig, Tdelay=0):
-        self.Tx(f'TRIG:DEL {Tdelay}')
+    def TRIG(self, Ntrig, Tdly=0):
+        self.Tx(f'TRIG:DEL {Tdly}')
         self.Tx(f'TRIG:COUN {int(Ntrig)}')
         
     # set integration rate in number of power line cycles PLC
@@ -221,12 +221,12 @@ class pam(dev):
             self.Tx('DISP:ENAB OFF')
             
     # function to prepare for reading into buffer
-    def BPREP(self, Nmes, Tdelay=0, Nplc=0.01):
+    def BPREP(self, Nmes, Tdly=0, Nplc=0.01):
         self.Nmes = Nmes
-        self.Tdelay = Tdelay
+        self.Tdly = Tdly
         self.Nplc = Nplc
         
-        self.TRIG(Nmes, Tdelay)
+        self.TRIG(Nmes, Tdly)
         self.NPLC(Nplc)
         self.CLS()
         self.POIN(Nmes)
@@ -240,8 +240,8 @@ class pam(dev):
     # function to take measurement into buffer and read buffer
     def BREAD(self):
         self.INIT()
-        Twait = (self.Nplc/50 * 2 + self.Tdelay) * self.Nmes
-        time.wait(Twait)
+        Twait = (self.Nplc/50 + self.Tdly + 0.005) * self.Nmes + 0.01
+        time.sleep(Twait)
         
         data = self.DATA()
         
@@ -256,13 +256,13 @@ class pam(dev):
 
             
     # function to setup and take measurements store them to buffer and read them out
-    # Nmes is no of measurements, Tdelay is delay between measurements, Nplc is integration time
-    def BALL(self, Nmes, Tdelay=0, Nplc=0.01):
+    # Nmes is no of measurements, Tdly is delay between measurements, Nplc is integration time
+    def BALL(self, Nmes, Tdly=0, Nplc=0.01):
         self.Nmes = Nmes
-        self.Tdelay = Tdelay
+        self.Tdly = Tdly
         self.Nplc = Nplc
         
-        self.TRIG(Nmes, Tdelay)
+        self.TRIG(Nmes, Tdly)
         self.NPLC(Nplc)
         self.CLS()
         self.POIN(Nmes)
@@ -271,7 +271,7 @@ class pam(dev):
         self.FULL()
         self.INIT()
         
-        Twait = (Nplc/50 * 2 + Tdelay) * Nmes
+        Twait = (Nplc/50 + Tdly + 0.005) * Nmes + 0.01
         time.wait(Twait)
         
         data = self.DATA()
@@ -312,6 +312,7 @@ class psu(dev):
                 binput('Change polarity to positive')
             else:
                 input('Change polarity to positive')
+                print()
             self.pos = True
         
         if V >= 0 and self.pos == False:
@@ -319,6 +320,7 @@ class psu(dev):
                 binput('Change polarity to positive')
             else:
                 input('Change polarity to positive')
+                print()
             self.pos = True
             
         if V < 0 and self.pos == True:
@@ -326,6 +328,7 @@ class psu(dev):
                 binput('Change polarity to negative')
             else:
                 input('Change polarity to negative')
+                print()
             self.pos = False
     
     # set the output voltage

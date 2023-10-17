@@ -9,9 +9,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 import sys
+import subprocess
 import glob as gb
+import time as tm
 from importlib import reload
-import alive_progress as ap
 
 import SerLib as sl
 sl = reload(sl)
@@ -75,6 +76,14 @@ def tprint(text=''):
     return None
 
 
+# function to convert time to s or min with units for printing
+def smtim(time):
+    if time > 60:
+        return f'{(time/60):.0f} min'
+    else:
+        return f'{time:.0f} s'
+
+
 # specify serial ports for power supply and picoammeter
 psu_port = '/dev/tty.usbserial-14230'
 pam_port = '/dev/tty.usbserial-14220'
@@ -82,14 +91,14 @@ pam_port = '/dev/tty.usbserial-14220'
 # minimum and maximum voltage and increment in V and no of repeat measurements
 Vmin = -10
 Vmax = 10
-Vinc = 0.1
+Vinc = 0.01
 Nrpt = 10
 
 # delay time between repeated measurements in s
-T = 0
+Tdly = 0
 
 # integration time in number of line phase cycles
-Nplc = 0.01
+Nplc = 1
 
 # get dataset number
 ds_num = input('Eneter dataset number: ')
@@ -110,11 +119,17 @@ if (f'Data/{ds_name}.csv' in ds_arr) == True:
     ds_name += '_rt'
     
 # caclulate number of voltages to be set
-Nvlt = ((Vmax - Vmin) / Vinc)
+Nvlt = int((Vmax - Vmin) / Vinc)
+
+# no of total measurements
+Ntot = int(Nrpt * Nvlt)
 
 # get timestamp for the dataset
 ts = datetime.datetime.now()
-ts.replace(microsecond=0)
+ts = ts.replace(microsecond=0)
+
+# calculate integration time in ms
+Tint = Nplc / 50 * 1000
 
 # write metadata file
 file = f'Data/{ds_name}_md.txt'
@@ -128,31 +143,45 @@ tprint(f'Vmin = {Vmin:.2f} V')
 tprint(f'Vmax = {Vmax:.2f} V')
 tprint(f'Vinc = {Vinc:.2f} V')
 tprint()
+tprint(f'Tdly = {Tdly:.0f} ms')
+tprint(f'Nplc = {Nplc:.2f}')
+tprint(f'Tint = {Tint:.0f} ms')
+tprint()
 tprint(f'Nrpt = {Nrpt:.0f}')
 tprint(f'Nvlt = {Nvlt:.0f}')
-tprint(f'Ntot = {(Nrpt * Nvlt):.0f}')
+tprint(f'Ntot = {Ntot:.0f}')
 print()
 
+# boolean to sepcify if using macOS
+macOS = False
+
+# call caffinate to prevent osx from entering sleep mode
+if 'darwin' in sys.platform:
+    print('macOS detected running caffinate subprocess')
+    print()
+    macOS = True
+    subprocess.Popen('caffeinate')
+
 # initialise measurement instruments
-psu = sl.psu(psu_port, 9600, bar=True)
-pam = sl.pam(pam_port, 9600)
+psu = sl.psu(psu_port, 9600)
+pam = sl.pam(pam_port, 57600)
 
 # ensure serial ports are open
 psu.opn()
 pam.opn()
 
-# set timeout to 400ms
-psu.timeout(200)
-pam.timeout(200)
+# set timeout to 300 ms
+psu.timeout(300)
+pam.timeout(300)
 
 # check psu and pam connected with IDN? query
 IDN_psu = psu.IDN()
 IDN_pam = pam.IDN().split(',')[0]
 
 # print connected instrument status
-print()
 print(f'PSU connected: {IDN_psu}')
 print(f'PAM connected: {IDN_pam}')
+print()
 
 # set psu output to 0V and enable
 psu.VSET(0)
@@ -168,7 +197,7 @@ rang = 2e-9
 pam.RANG(rang)
 
 # prepare the picoammeter for reading into buffer
-pam.BPREP(Nrpt, T, Nplc)
+pam.BPREP(Nrpt, Tdly, Nplc)
 
 # array of voltages to be measured
 V = np.arange(Vmin, Vmax, Vinc)
@@ -182,48 +211,69 @@ with open(f'Data/{ds_name}.csv', 'w') as ds:
     # create column names for the dataset
     print('voltage (V), photocurrent (A)', file=ds)
 
-    # initialise a progress bar
-    with ap.alive_bar(len(V)) as bar:
+    # get time at the start of the data acquisition
+    Ti = tm.time()
+    
+    # loop over all voltages
+    for i in range(0, len(V)):
+        # set psu voltage
+        psu.VSET(V[i])
+    
+        # prepare the picoammeter for next measurement into buffer
+        pam.BARM()
         
-        # loop over all voltages
-        for i in range(0, len(V)):
-            # set psu voltage
-            psu.VSET(V[i])
+        # take set of measurements into buffer and read it
+        I_buff = pam.BREAD()
         
-            # prepare the picoammeter for next measurement into buffer
+        # check for overflow error
+        while np.amax(I_buff) >= 1e+37:
+            # increase range to next highest value and set it
+            rang *= 10
+            pam.RANG(rang)
+            
+            # take measuremenet and write to dataset file
             pam.BARM()
-            
-            # take set of measurements into buffer and read it
             I_buff = pam.BREAD()
-            
-            # check for overflow error
-            while np.amax(I_buff) >= 1e+37:
-                # increase range to next highest value and set it
-                rang *= 10
-                pam.RANG(rang)
-                
-                # take measuremenet and write to dataset file
-                pam.BARM()
-                I_buff = pam.BREAD()
-            
-            # get average and sem of current measurements from the buffer
-            I_avg = np.mean(I_buff)
-            I_sem = np.std(I_buff) / np.sqrt(Nrpt)
-            
-            # show current value in terminal and update progress bar
-            bar.title(f'I = {I_avg} ± {I_sem} A \t')
-            bar()
-            
-            # write the measurements into the current array
-            I[i, :] = I_buff
-            
-            # loop over measurements from the buffer and write to the dataset
-            for j in range(0, Nrpt):
-                print(f'{V[i]:.3f}, {I_buff[j]}', file=ds)
+        
+        # get average and sem of current measurements from the buffer
+        I_avg = np.mean(I_buff)
+        I_sem = np.std(I_buff) / np.sqrt(Nrpt)
+        
+        # write the measurements into the current array
+        I[i, :] = I_buff
+        
+        # no of readings taken so far
+        Nnow = (i+1) * Nrpt
+        # elapsed time in s
+        Tnow = tm.time() - Ti
+        if Tnow < 60:
+            Tnow_print = f'{(Tnow / 60):.0f} min'
+        else:
+            Tnow_print = f'{Tnow:.0f} s'
+        
+        
+        # time per one reading in s
+        Tpor = Tnow / Nnow
+        
+        
+        # estimated time till end of data acquisition
+        Test = (Ntot - Nnow) * Tpor / 60
+    
+        print(f'{Nnow}/{Ntot}, ', \
+              f'{(Nnow/Ntot)*100:.0f}%, ', \
+              f'{smtim(Tnow)}, ', \
+              f'{smtim(Test)}, ', \
+              f'{Tpor*1e3:.0f} ms')
+        print(f'I = {I_avg:.6e} ± {I_sem:.6e} A \t')
+        print('\033[A\033[A\033[A')
+        
+        # loop over measurements from the buffer and write to the dataset
+        for j in range(0, Nrpt):
+            print(f'{V[i]:.3f}, {I_buff[j]}', file=ds)
             
             
 # print status
-print() 
+print()
 print('Data acquisition finished')
 print()
 
@@ -241,7 +291,6 @@ I_sem = np.std(I, axis=1) / np.sqrt(Nrpt)
 
 #print status
 print('Plotting measured IV curve')
-print()
 
 # parameters for plotting preliminary IV curve
 plt.figure(1)
@@ -255,4 +304,3 @@ plt.grid()
 plt.errorbar(V, I_avg, yerr=I_sem, fmt='x', c='blue', capsize=5)
 
 plt.show()
-

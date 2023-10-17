@@ -104,7 +104,10 @@ if (f'Data/{ds_name}.csv' in ds_arr) == True:
     ds_name += '_rt'
     
 # caclulate number of voltages to be set
-Nvlt = ((Vmax - Vmin) / Vinc)
+Nvlt = int((Vmax - Vmin) / Vinc)
+
+# no of total measurements
+Ntot = int(Nrpt * Nvlt)
 
 # get timestamp for the dataset
 ts = datetime.datetime.now()
@@ -124,7 +127,7 @@ tprint(f'Vinc = {Vinc:.2f} V')
 tprint()
 tprint(f'Nrpt = {Nrpt:.0f}')
 tprint(f'Nvlt = {Nvlt:.0f}')
-tprint(f'Ntot = {(Nrpt * Nvlt):.0f}')
+tprint(f'Ntot = {Ntot:.0f}')
 print()
 
 # initialise measurement instruments
