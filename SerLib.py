@@ -240,7 +240,7 @@ class pam(dev):
     # function to take measurement into buffer and read buffer
     def BREAD(self):
         self.INIT()
-        Twait = (self.Nplc/50 + self.Tdly + 0.005) * self.Nmes + 0.01
+        Twait = (self.Nplc/50 + self.Tdly + 0.01) * self.Nmes + 0.01
         time.sleep(Twait)
         
         data = self.DATA()
@@ -271,7 +271,7 @@ class pam(dev):
         self.FULL()
         self.INIT()
         
-        Twait = (Nplc/50 + Tdly + 0.005) * Nmes + 0.01
+        Twait = (Nplc/50 + Tdly + 0.01) * Nmes + 0.01
         time.wait(Twait)
         
         data = self.DATA()
@@ -331,8 +331,36 @@ class psu(dev):
                 print()
             self.pos = False
     
+    def OFST(self, V):
+        
+        if hasattr(self, 'ofst') == False:
+            input('Set offset to 0V')
+            print()
+            self.ofst = 0
+        
+        if V > 30 and self.ofst < 30:
+            input('Set offset voltage to 30V')
+            print()
+            self.ofst = 30
+            
+        if V < -30 and self.ofst > -30:
+            input('Set offset voltage to -30V')
+            print()
+            self.ofst = -30
+            
+        if -30 < V < 30 and self.ofst != 0:
+            input('Set offset voltage to 0V')
+            print()
+            self.ofst = 0
+            
+        return self
+        
+    
     # set the output voltage
     def VSET(self, V):
+
+        self.OFST(V)
+        V -= self.ofst
         self.POL(V)
         V_abs = np.abs(V)
         self.Tx(f'VSET1:{V_abs:.2f}')
@@ -353,6 +381,11 @@ class psu(dev):
             
         if enb == False:
             self.Tx('OUT0')
+            
+    def WAIT(self, V):
+        if self.V == V:            
+            input(f'Waiting at V={V:.2f} V')
+            print()
             
     # enable beep
     def BEEP(self, enb):
