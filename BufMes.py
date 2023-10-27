@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-DAQ Buffer Measuring Sequence v1.0
+DAQ Buffer Measuring Sequence v2.0
 
 Lukas Kostal, 16.10.2023, ICL
 """
@@ -89,9 +89,9 @@ psu_port = '/dev/tty.usbserial-14230'
 pam_port = '/dev/tty.usbserial-14220'
 
 # minimum and maximum voltage and increment in V and no of repeat measurements
-Vmin = -10
-Vmax = 10
-Vinc = 0.01
+Vmin = 0
+Vmax = 60
+Vinc = 0.5
 Nrpt = 10
 
 # delay time between repeated measurements in s
@@ -132,7 +132,7 @@ ts = ts.replace(microsecond=0)
 Tint = Nplc / 50 * 1000
 
 # write metadata file
-file = f'Data/{ds_name}_md.txt'
+file = f'Data/{ds_name}.txt'
 open(file, 'w')
 
 print()
@@ -257,7 +257,7 @@ with open(f'Data/{ds_name}.csv', 'w') as ds:
         
         
         # estimated time till end of data acquisition
-        Test = (Ntot - Nnow) * Tpor / 60
+        Test = (Ntot - Nnow) * Tpor
     
         print(f'{Nnow}/{Ntot}, ', \
               f'{(Nnow/Ntot)*100:.0f}%, ', \
@@ -302,5 +302,5 @@ plt.grid()
 
 # plot IV curve
 plt.errorbar(V, I_avg, yerr=I_sem, fmt='x', c='blue', capsize=5)
-
+plt.savefig(f'Data/Plots/IV_{ds_num}_{ds_filt}.png', dpi=300, bbox_inches='tight')
 plt.show()
