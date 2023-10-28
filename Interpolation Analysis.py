@@ -19,11 +19,13 @@ def lin(x, m, c):
     y = m*x + c
     return y
 
-# quadratic fucntion for fitting
+
+# linear function for fitting with ODR
 def srlin(q, x):
     m, c = q
     y = m*x + c
     return y
+
 
 # specify dataset number to analyze
 ds_num = 1
