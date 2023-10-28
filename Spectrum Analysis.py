@@ -80,7 +80,7 @@ for i in range(0, len(filt)):
         plt.xlim(wl[pks[0]]-10, wl[pks[0]]+10)
         
         # save the plot
-        plt.savefig(f'Output/{filt[i]}_spec.png', dpi=300, bbox_inches='tight')
+        plt.savefig(f'Output/Spec_{filt[i]}.png', dpi=300, bbox_inches='tight')
         plt.show()
     
     # plot all peaks on a subplot
