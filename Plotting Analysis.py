@@ -39,7 +39,7 @@ I_err = np.zeros(len(filt), dtype=object)
 for i in range(0, len(filt)):
      
     # load the data voltage V in V photocurrent I in nA and convert to A
-    V, I = np.loadtxt(f'Data/SerMes_{ds_num}_{filt[i]}.csv', delimiter=',', unpack=True, skiprows=1)
+    V, I = np.loadtxt(f'Data/SerMes/SerMes_{ds_num}_{filt[i]}.csv', delimiter=',', unpack=True, skiprows=1)
  
     # get indices at which the voltage changes
     idx = np.where(V[:-1] != V[1:])[0] + 1

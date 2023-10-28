@@ -96,7 +96,7 @@ V_bg, I_bg = np.loadtxt(f'Data/SerMes_{ds_num}_BG.csv', delimiter=',', unpack=Tr
 for i in range(0, len(filt)):
      
     # load the data voltage V in V photocurrent I in nA and convert to A
-    V, I = np.loadtxt(f'Data/SerMes_{ds_num}_{filt[i]}.csv', delimiter=',', unpack=True, skiprows=1)
+    V, I = np.loadtxt(f'Data/SerMes/SerMes_{ds_num}_{filt[i]}.csv', delimiter=',', unpack=True, skiprows=1)
  
     # subtract background photocurrent if specified
     I -= I_bg
