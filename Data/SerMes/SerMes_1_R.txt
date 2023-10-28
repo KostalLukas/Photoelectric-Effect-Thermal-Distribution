@@ -1,0 +1,14 @@
+Dataset: SerMes_1_R
+Timestamp: 2023-10-20 10:59:11
+
+Vmin = -10.00 V
+Vmax = 10.00 V
+Vinc = 0.01 V
+
+Tdly = 0 ms
+Nplc = 1.00
+Tint = 20 ms
+
+Nrpt = 10
+Nvlt = 2000
+Ntot = 20000
