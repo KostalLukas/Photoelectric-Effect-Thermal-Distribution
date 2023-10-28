@@ -59,7 +59,7 @@ V_err = np.zeros(len(filt), dtype=object)
 I_arr = np.zeros(len(filt), dtype=object)
 I_err = np.zeros(len(filt), dtype=object)
  
-# load the voltage from the background curve
+# load the data from background curve to subtract
 V_bg, I_bg = np.loadtxt(f'Data/SerMes_{ds_num}_BG.csv', delimiter=',', unpack=True, skiprows=1)
  
 # loop over all filters to subtract background and average over repeated measurements
