@@ -183,7 +183,7 @@ with open('Output/Stopping.csv', 'w') as stp:
 
 
 # pick out filters to be ignored in final fit
-ign_idx = filt.index(ign)
+ign_idx = filt.index(*ign)
 f_fit = np.delete(f, ign_idx)
 f_fit_err = np.delete(f_err, ign_idx)
 V0_fit = np.delete(V0_arr, ign_idx)
